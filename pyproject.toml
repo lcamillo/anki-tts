@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "ankitts"
+version = "0.2.0"
+description = "Text-to-Speech application for Anki with both Python and Swift implementations"
+authors = ["Lucas Paulo de Lima Camillo"]
+readme = "README.md"
+packages = [{include = "ankitts"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+requests = "^2.31.0"
+pyttsx3 = "^2.90"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+ankitts = "anki_tts:main"
