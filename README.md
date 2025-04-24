@@ -103,6 +103,12 @@ A macOS menu bar application providing Text-to-Speech capabilities for Anki flas
     lsof -i :8767 | grep LISTEN | awk '{print $2}' | xargs kill -9
     ```
 
+4. If Flask server doesn't terminate properly:
+   - If the Flask server is stuck and preventing a new instance from starting, use this command to kill the process:
+   ```bash
+   lsof -i :8767 | grep LISTEN | awk '{print $2}' | xargs kill -9
+   ```
+
 ## Contributing
 
 Feel free to open issues or submit pull requests for any improvements. 
