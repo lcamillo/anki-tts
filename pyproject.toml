@@ -4,7 +4,7 @@ version = "0.2.0"
 description = "Text-to-Speech application for Anki with both Python and Swift implementations"
 authors = ["Lucas Paulo de Lima Camillo"]
 readme = "README.md"
-packages = [{include = "ankitts"}]
+package_mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"

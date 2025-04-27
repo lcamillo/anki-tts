@@ -13,9 +13,6 @@ let package = Package(
         .executableTarget(
             name: "AnkiTTSApp",
             dependencies: [],
-            resources: [
-                .copy("Resources")
-            ],
             swiftSettings: [
                 .define("DEBUG", .when(configuration: .debug))
             ]
