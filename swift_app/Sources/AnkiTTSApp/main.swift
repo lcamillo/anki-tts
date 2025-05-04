@@ -74,7 +74,7 @@ class SingleInstanceManager {
 class AnkiTTSController: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var pythonProcess: Process?
-    var ttsSpeed: Float = 1.3 // Default speed
+    var ttsSpeed: Float = 1.1 // Default speed
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("Application starting...")

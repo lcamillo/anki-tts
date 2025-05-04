@@ -99,7 +99,7 @@ def extract_front_text(html_str):
 
 def get_tts_speed():
     """Get the TTS speed from the speed file, or return default if not found."""
-    default_speed = 1.3
+    default_speed = 1.1
     
     try:
         if os.path.exists(SPEED_FILE):
