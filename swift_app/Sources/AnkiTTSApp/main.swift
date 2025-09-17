@@ -1,6 +1,51 @@
 import Foundation
 import AppKit
 
+// ANSI color codes for beautiful terminal output
+struct Colors {
+    static let red = "\u{001B}[0;31m"
+    static let green = "\u{001B}[0;32m"
+    static let yellow = "\u{001B}[1;33m"
+    static let blue = "\u{001B}[0;34m"
+    static let purple = "\u{001B}[0;35m"
+    static let cyan = "\u{001B}[0;36m"
+    static let white = "\u{001B}[1;37m"
+    static let bold = "\u{001B}[1m"
+    static let reset = "\u{001B}[0m"
+}
+
+// Helper functions for colored output
+func printColored(_ message: String, color: String = Colors.white, bold: Bool = false) {
+    let style = bold ? Colors.bold : ""
+    print("\(style)\(color)\(message)\(Colors.reset)")
+}
+
+func printStatus(_ message: String) {
+    printColored("▶ \(message)", color: Colors.blue, bold: true)
+}
+
+func printSuccess(_ message: String) {
+    printColored("✅ \(message)", color: Colors.green, bold: true)
+}
+
+func printWarning(_ message: String) {
+    printColored("⚠️  \(message)", color: Colors.yellow, bold: true)
+}
+
+func printError(_ message: String) {
+    printColored("❌ \(message)", color: Colors.red, bold: true)
+}
+
+func printInfo(_ message: String) {
+    printColored("ℹ️  \(message)", color: Colors.cyan, bold: true)
+}
+
+func printHeader(_ title: String) {
+    printColored("╔══════════════════════════════════════════════════════════════╗", color: Colors.cyan, bold: true)
+    printColored("║                    \(title)                    ║", color: Colors.cyan, bold: true)
+    printColored("╚══════════════════════════════════════════════════════════════╝", color: Colors.cyan, bold: true)
+}
+
 // Add a single-instance manager to prevent multiple instances of the app
 class SingleInstanceManager {
     static let shared = SingleInstanceManager()
@@ -26,7 +71,7 @@ class SingleInstanceManager {
                     // Check if process is still running
                     if kill(pid, 0) == 0 {
                         // Process exists, can't launch another instance
-                        print("Another instance is already running with PID: \(pid)")
+                        printWarning("Another instance is already running with PID: \(pid)")
                         return false
                     } else {
                         // Process doesn't exist, file is stale
@@ -51,7 +96,7 @@ class SingleInstanceManager {
             
             return true
         } catch {
-            print("Failed to create lock file: \(error)")
+            printError("Failed to create lock file: \(error)")
             return false
         }
     }
@@ -64,9 +109,9 @@ class SingleInstanceManager {
         do {
             try task.run()
             task.waitUntilExit()
-            print("Cleaned up any existing Python processes")
+            printSuccess("Cleaned up any existing Python processes")
         } catch {
-            print("Error cleaning up Python processes: \(error)")
+            printError("Error cleaning up Python processes: \(error)")
         }
     }
 }
@@ -77,7 +122,8 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
     var ttsSpeed: Float = 1.5 // Default speed
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("🚀 Anki TTS Application starting...")
+        printHeader("🚀 Anki TTS Application 🚀")
+        printStatus("Initializing menu bar application...")
         
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -85,8 +131,11 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
             button.image = NSImage(systemSymbolName: "speaker.wave.2", accessibilityDescription: "Anki TTS")
         }
         
+        printSuccess("Menu bar item created")
+        
         // Create the menu
         setupMenu()
+        printSuccess("Menu configured")
         
         // Start the Python script immediately
         startPythonScript()
@@ -157,21 +206,23 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         do {
             // Write just the speed value
             try String(ttsSpeed).write(to: speedFilePath, atomically: true, encoding: .utf8)
-            print("⚙️ Speed updated to: \(ttsSpeed)x")
+            printInfo("Speed updated to: \(ttsSpeed)x")
         } catch {
-            print("❌ Error writing speed to file: \(error)")
+            printError("Error writing speed to file: \(error)")
         }
     }
     
     func startPythonScript() {
+        printStatus("Starting Python TTS engine...")
+        
         // Get the path to the Python script
         let scriptPath = findPythonScript()
         guard let scriptPath = scriptPath else {
-            print("❌ Could not find anki_tts.py")
+            printError("Could not find anki_tts.py")
             return
         }
         
-        print("✅ Found script at: \(scriptPath)")
+        printSuccess("Found script at: \(scriptPath)")
         
         // Write the initial speed to the file (set to 1.5x default)
         ttsSpeed = 1.5
@@ -253,15 +304,15 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         do {
             try process.run()
             pythonProcess = process
-            print("🐍 Python TTS process started successfully")
+            printSuccess("Python TTS process started successfully")
         } catch {
-            print("❌ Failed to start Python process: \(error)")
+            printError("Failed to start Python process: \(error)")
         }
     }
     
     func findPythonScript() -> String? {
-        print("\nSearching for anki_tts.py...")
-        print("Current directory: \(FileManager.default.currentDirectoryPath)")
+        printStatus("Searching for anki_tts.py...")
+        printInfo("Current directory: \(FileManager.default.currentDirectoryPath)")
         
         // Try multiple possible locations
         let possibleLocations = [
@@ -274,16 +325,16 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
             "/Users/lucascamillo/anki-tts/swift_app/Resources/anki_tts.py"
         ]
         
-        print("\nChecking these locations:")
+        printStatus("Checking possible locations:")
         for path in possibleLocations {
-            print("Checking: \(path)")
+            printInfo("Checking: \(path)")
             if FileManager.default.fileExists(atPath: path) {
-                print("✅ Found Python script at: \(path)")
+                printSuccess("Found Python script at: \(path)")
                 return path
             }
         }
         
-        print("\n❌ Could not find anki_tts.py in any location")
+        printError("Could not find anki_tts.py in any location")
         return nil
     }
     
@@ -296,7 +347,7 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
 autoreleasepool {
     // Check if another instance is already running
     if !SingleInstanceManager.shared.checkAndLock() {
-        print("Another instance of Anki TTS is already running. Exiting.")
+        printError("Another instance of Anki TTS is already running. Exiting.")
         exit(0)
     }
     
