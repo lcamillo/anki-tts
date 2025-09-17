@@ -8,6 +8,48 @@ import os
 import tempfile
 import atexit
 
+# ANSI color codes for beautiful terminal output
+class Colors:
+    RED = '\033[0;31m'
+    GREEN = '\033[0;32m'
+    YELLOW = '\033[1;33m'
+    BLUE = '\033[0;34m'
+    PURPLE = '\033[0;35m'
+    CYAN = '\033[0;36m'
+    WHITE = '\033[1;37m'
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+    RESET = '\033[0m'
+
+def print_colored(message, color=Colors.WHITE, bold=False):
+    """Print a colored message to the terminal"""
+    style = Colors.BOLD if bold else ""
+    print(f"{style}{color}{message}{Colors.RESET}", flush=True)
+
+def print_status(message):
+    """Print a status message with blue color"""
+    print_colored(f"▶ {message}", Colors.BLUE, bold=True)
+
+def print_success(message):
+    """Print a success message with green color"""
+    print_colored(f"✅ {message}", Colors.GREEN, bold=True)
+
+def print_warning(message):
+    """Print a warning message with yellow color"""
+    print_colored(f"⚠️  {message}", Colors.YELLOW, bold=True)
+
+def print_error(message):
+    """Print an error message with red color"""
+    print_colored(f"❌ {message}", Colors.RED, bold=True)
+
+def print_info(message):
+    """Print an info message with cyan color"""
+    print_colored(f"ℹ️  {message}", Colors.CYAN, bold=True)
+
+def print_reading(message):
+    """Print a reading message with purple color"""
+    print_colored(f"🎧 {message}", Colors.PURPLE, bold=True)
+
 # Global flag to track speaking state, managed by callbacks
 is_speaking = False
 
@@ -118,46 +160,48 @@ def get_tts_speed():
 
 def onStart(name):
     global is_speaking
-    print(f'TTS starting utterance: {name}', flush=True)
+    print_status(f'TTS starting utterance: {name}')
     is_speaking = True
 
 def onFinish(name, completed):
     global is_speaking
-    print(f'TTS finished utterance: {name}, Completed: {completed}', flush=True)
+    status = "completed" if completed else "interrupted"
+    print_success(f'TTS finished utterance: {name} ({status})')
     is_speaking = False
 
 def cleanup():
     """Ensure TTS engine is properly stopped on exit."""
     global tts_engine, is_speaking
     if tts_engine is not None:
-        print("Cleaning up TTS engine...", flush=True)
+        print_status("Cleaning up TTS engine...")
         try:
             if is_speaking:
                 tts_engine.stop()
             is_speaking = False
+            print_success("TTS engine cleaned up successfully")
         except Exception as e:
-            print(f"Error during cleanup: {e}", flush=True)
+            print_error(f"Error during cleanup: {e}")
 
 def speak_text(text):
     """Centralized function to speak text, ensuring proper state management."""
     global tts_engine, is_speaking
     
     if is_speaking:
-        print("TTS is already speaking, stopping current speech...", flush=True)
+        print_warning("TTS is already speaking, stopping current speech...")
         try:
             tts_engine.stop()
             time.sleep(0.1)  # Brief pause to ensure stop completes
             is_speaking = False
         except Exception as e:
-            print(f"Error stopping speech: {e}", flush=True)
+            print_error(f"Error stopping speech: {e}")
     
     # Double-check speaking state before proceeding
     if not is_speaking:
-        print(f"Reading: {text}", flush=True)
+        print_reading(f"Reading: {text}")
         tts_engine.say(text)
         tts_engine.runAndWait()
     else:
-        print("Speaking flag still set, cannot start new speech", flush=True)
+        print_warning("Speaking flag still set, cannot start new speech")
 
 def main():
     global is_speaking, tts_engine
@@ -174,7 +218,7 @@ def main():
     
     # Get default rate (words per minute)
     default_rate = tts_engine.getProperty('rate')
-    print(f"Default TTS rate: {default_rate}", flush=True)
+    print_info(f"Default TTS rate: {default_rate}")
     
     # Keep track of the current card ID to avoid re-reading
     last_card_id = None
@@ -184,8 +228,13 @@ def main():
     new_rate = int(default_rate * speed)
     tts_engine.setProperty('rate', new_rate)
     
-    print(f"Starting Anki TTS... Speed: {speed}x (rate: {new_rate})", flush=True)
-    print(f"Using speed file: {SPEED_FILE}", flush=True)
+    # Beautiful startup message
+    print_colored("╔══════════════════════════════════════════════════════════════╗", Colors.CYAN, bold=True)
+    print_colored("║                    🎧 Anki TTS Engine 🎧                   ║", Colors.CYAN, bold=True)
+    print_colored("╚══════════════════════════════════════════════════════════════╝", Colors.CYAN, bold=True)
+    
+    print_success(f"Starting Anki TTS... Speed: {speed}x (rate: {new_rate})")
+    print_info(f"Using speed file: {SPEED_FILE}")
     
     # Time of last speed check
     last_speed_check = time.time()
@@ -193,7 +242,7 @@ def main():
     # Auto-kill functionality: track last activity time
     last_activity_time = time.time()
     INACTIVITY_TIMEOUT = 15 * 60  # 15 minutes in seconds
-    print(f"Auto-kill enabled: will exit after {INACTIVITY_TIMEOUT//60} minutes of inactivity", flush=True)
+    print_info(f"Auto-kill enabled: will exit after {INACTIVITY_TIMEOUT//60} minutes of inactivity")
     
     while True:
         try:
@@ -202,19 +251,19 @@ def main():
             if current_time - last_speed_check > 0.5:
                 new_speed = get_tts_speed()
                 if new_speed != speed:
-                    print(f"Detected speed change from {speed}x to {new_speed}x", flush=True)
+                    print_info(f"Detected speed change from {speed}x to {new_speed}x")
                     speed = new_speed
                     new_rate = int(default_rate * speed)
                     
                     # Stop speech if currently speaking
                     if is_speaking:
-                        print("Stopping current speech to change speed...", flush=True)
+                        print_warning("Stopping current speech to change speed...")
                         tts_engine.stop()
                         time.sleep(0.1) # Give stop command time
                         is_speaking = False
                         
                     tts_engine.setProperty('rate', new_rate)
-                    print(f"Speed updated to {speed}x (rate: {new_rate})", flush=True)
+                    print_success(f"Speed updated to {speed}x (rate: {new_rate})")
                 last_speed_check = current_time
             
             # Query Anki for the current card
@@ -235,11 +284,11 @@ def main():
                 # Check for inactivity timeout
                 current_time = time.time()
                 if current_time - last_activity_time > INACTIVITY_TIMEOUT:
-                    print(f"No activity for {INACTIVITY_TIMEOUT//60} minutes. Auto-exiting...", flush=True)
+                    print_warning(f"No activity for {INACTIVITY_TIMEOUT//60} minutes. Auto-exiting...")
                     cleanup()
                     sys.exit(0)
                 
-                print("Waiting for Anki...", flush=True)
+                print_status("Waiting for Anki...")
                 time.sleep(1)
                 continue
 
@@ -247,7 +296,7 @@ def main():
             
             # Process new card
             if current_card_id != last_card_id:
-                print(f"New card detected: {current_card_id}", flush=True)
+                print_success(f"New card detected: {current_card_id}")
                 
                 # Update activity time when we detect a new card
                 last_activity_time = time.time()
@@ -265,7 +314,7 @@ def main():
                     # Use the centralized speak function
                     speak_text(front_text)
                 else:
-                    print("No front text found to read.", flush=True)
+                    print_warning("No front text found to read.")
                         
                 last_card_id = current_card_id
 
@@ -273,16 +322,16 @@ def main():
             if is_speaking:
                 tts_engine.stop()
                 is_speaking = False
-            print("Waiting for Anki to start...", flush=True)
+            print_warning("Waiting for Anki to start...")
             time.sleep(1)
         except KeyboardInterrupt:
             cleanup()
-            print("Exiting...", flush=True)
+            print_success("Exiting gracefully...")
             sys.exit(0)
         except Exception as e:
             # Log the full traceback for debugging
             import traceback
-            print(f"Error: {e}", flush=True)
+            print_error(f"Error: {e}")
             traceback.print_exc(file=sys.stdout)
             if is_speaking:
                 tts_engine.stop()
@@ -302,8 +351,8 @@ if __name__ == "__main__":
             # Write the initial speed to the file
             with open(SPEED_FILE, 'w') as f:
                 f.write(str(initial_speed))
-            print(f"Set initial speed from command line: {initial_speed}", flush=True)
+            print_success(f"Set initial speed from command line: {initial_speed}")
         except Exception as e:
-            print(f"Error setting initial speed: {e}", flush=True)
+            print_error(f"Error setting initial speed: {e}")
     
     main() 
