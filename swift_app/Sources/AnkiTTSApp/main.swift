@@ -74,7 +74,7 @@ class SingleInstanceManager {
 class AnkiTTSController: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var pythonProcess: Process?
-    var ttsSpeed: Float = 1.1 // Default speed
+    var ttsSpeed: Float = 1.5 // Default speed
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("Application starting...")
@@ -173,7 +173,8 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         
         print("Found script at: \(scriptPath)")
         
-        // Write the initial speed to the file
+        // Write the initial speed to the file (set to 1.5x default)
+        ttsSpeed = 1.5
         updatePythonSpeed()
         
         // Pass the initial speed as a command-line argument too (belt and suspenders)
@@ -182,7 +183,7 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         // Create and configure the process
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["conda", "run", "-n", "anki-tts", "python", "-u", scriptPath, initialSpeedArg]
+        process.arguments = ["uv", "run", "--directory", "..", "python", "-u", scriptPath, initialSpeedArg]
         process.currentDirectoryURL = URL(fileURLWithPath: (scriptPath as NSString).deletingLastPathComponent)
         
         // Set up pipes for output and error

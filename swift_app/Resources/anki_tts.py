@@ -99,7 +99,7 @@ def extract_front_text(html_str):
 
 def get_tts_speed():
     """Get the TTS speed from the speed file, or return default if not found."""
-    default_speed = 1.1
+    default_speed = 1.5
     
     try:
         if os.path.exists(SPEED_FILE):
@@ -190,6 +190,11 @@ def main():
     # Time of last speed check
     last_speed_check = time.time()
     
+    # Auto-kill functionality: track last activity time
+    last_activity_time = time.time()
+    INACTIVITY_TIMEOUT = 15 * 60  # 15 minutes in seconds
+    print(f"Auto-kill enabled: will exit after {INACTIVITY_TIMEOUT//60} minutes of inactivity", flush=True)
+    
     while True:
         try:
             # Check for speed updates every 0.5 seconds
@@ -226,6 +231,14 @@ def main():
                 if is_speaking:
                     tts_engine.stop()
                     is_speaking = False
+                
+                # Check for inactivity timeout
+                current_time = time.time()
+                if current_time - last_activity_time > INACTIVITY_TIMEOUT:
+                    print(f"No activity for {INACTIVITY_TIMEOUT//60} minutes. Auto-exiting...", flush=True)
+                    cleanup()
+                    sys.exit(0)
+                
                 print("Waiting for Anki...", flush=True)
                 time.sleep(1)
                 continue
@@ -235,6 +248,9 @@ def main():
             # Process new card
             if current_card_id != last_card_id:
                 print(f"New card detected: {current_card_id}", flush=True)
+                
+                # Update activity time when we detect a new card
+                last_activity_time = time.time()
                 
                 # Always ensure any previous speech is stopped
                 if is_speaking:
