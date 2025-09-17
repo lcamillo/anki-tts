@@ -77,7 +77,7 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
     var ttsSpeed: Float = 1.5 // Default speed
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("Application starting...")
+        print("🚀 Anki TTS Application starting...")
         
         // Create status bar item
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -157,9 +157,9 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         do {
             // Write just the speed value
             try String(ttsSpeed).write(to: speedFilePath, atomically: true, encoding: .utf8)
-            print("Speed updated to: \(ttsSpeed), wrote to: \(speedFilePath.path)")
+            print("⚙️ Speed updated to: \(ttsSpeed)x")
         } catch {
-            print("Error writing speed to file: \(error)")
+            print("❌ Error writing speed to file: \(error)")
         }
     }
     
@@ -167,11 +167,11 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         // Get the path to the Python script
         let scriptPath = findPythonScript()
         guard let scriptPath = scriptPath else {
-            print("Could not find anki_tts.py")
+            print("❌ Could not find anki_tts.py")
             return
         }
         
-        print("Found script at: \(scriptPath)")
+        print("✅ Found script at: \(scriptPath)")
         
         // Write the initial speed to the file (set to 1.5x default)
         ttsSpeed = 1.5
@@ -253,9 +253,9 @@ class AnkiTTSController: NSObject, NSApplicationDelegate {
         do {
             try process.run()
             pythonProcess = process
-            print("Python process started")
+            print("🐍 Python TTS process started successfully")
         } catch {
-            print("Failed to start Python process: \(error)")
+            print("❌ Failed to start Python process: \(error)")
         }
     }
     
