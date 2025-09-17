@@ -21,7 +21,7 @@ A macOS menu bar application providing Text-to-Speech capabilities for Anki flas
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/yourusername/anki-tts.git
+   git clone https://github.com/lcamillo/anki-tts.git
    cd anki-tts
    ```
 
