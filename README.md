@@ -1,14 +1,15 @@
 # Anki TTS
 
-A macOS menu bar application providing Text-to-Speech capabilities for Anki flashcards.
+A macOS menu bar application providing Text-to-Speech capabilities for Anki flashcards with ultra-fast response times.
 
 ## Features
 
 - 🎧 **Automatic TTS:** Reads Anki card content aloud during reviews.
+- ⚡ **Ultra-Fast Response:** ~50ms response time for near-instantaneous speech when changing cards.
 - ⚙️ **Menu Bar App:** Runs discreetly in the menu bar, not as a window.
 - ⏩ **Speed Control:** Adjust speech rate from 1.0x to 1.8x (0.1 increments, default 1.5x).
 - 🔒 **Single-Instance:** Prevents multiple app instances to avoid overlapping voices.
-- 🐍 **Python Backend:** Core TTS functionality handled by a Python script.
+- 🐍 **Pure Python:** Built entirely in Python using rumps for the menu bar interface and macOS `say` for TTS.
 - ⏰ **Auto-Shutdown:** Automatically stops after 15 minutes of inactivity to save resources.
 - 🚀 **Easy Launch:** Simple shell script for one-command startup.
 
@@ -18,6 +19,7 @@ A macOS menu bar application providing Text-to-Speech capabilities for Anki flas
 - Python 3.8+
 - [uv](https://github.com/astral-sh/uv) package manager
 - Anki with AnkiConnect plugin installed
+- macOS built-in `say` command (included with macOS)
 
 ## Installation
 
@@ -36,15 +38,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 The launch script will automatically handle this, but you can also run manually:
 ```bash
 uv venv
-uv pip install requests pyttsx3
+uv pip install requests rumps
 ```
 
-### Step 4: Build the Swift App
-```bash
-cd swift_app
-swift build -c release
-cd ..
-```
+**Note:** The app uses macOS's built-in `say` command for TTS, which provides better compatibility and audio quality than Python TTS libraries in menu bar applications.
 
 ## Usage
 
@@ -58,8 +55,9 @@ This will:
 - ✅ Set up the uv environment automatically
 - ✅ Install all Python dependencies
 - ✅ Set default speed to 1.5x
-- ✅ Launch both the Python TTS engine and Swift menu bar app
+- ✅ Launch the menu bar application
 - ✅ Enable auto-shutdown after 15 minutes of inactivity
+- ✅ Use macOS `say` command for reliable TTS audio output
 
 ### Manual Launch (Alternative)
 If you prefer to launch manually:
@@ -69,8 +67,7 @@ If you prefer to launch manually:
 2. **Launch the App:**
    ```bash
    # From the project root:
-   cd swift_app
-   swift run
+   uv run python anki_tts_menu.py
    ```
 
 3. **Control via Menu Bar:**
@@ -88,30 +85,45 @@ If you prefer to launch manually:
 
 ```
 .
-├── launch.sh                 # One-command launch script
+├── launch.sh                # One-command launch script
+├── anki_tts_menu.py         # Python menu bar application (main app)
 ├── pyproject.toml           # Python dependencies and configuration
-├── swift_app/               # Swift menu bar application (Frontend)
-│   ├── Sources/AnkiTTSApp/  # Swift source files (main.swift)
-│   ├── Resources/           # Resources (contains anki_tts.py)
-│   └── Package.swift        # Swift package manifest
 └── README.md                # This file
 ```
 
+## TTS Implementation
+
+The app uses macOS's built-in `say` command for text-to-speech, which provides several advantages:
+
+- **Reliability:** Native macOS integration ensures consistent audio output
+- **Performance:** Ultra-fast 50ms polling for near-instantaneous response
+- **Quality:** High-quality voices and audio processing
+- **Compatibility:** Works seamlessly with menu bar applications
+
+The app automatically:
+- Converts speed multipliers (1.0x - 1.8x) to appropriate speech rates
+- Uses the Daniel voice for clear, natural-sounding speech
+- Handles HTML content cleaning and special character replacement
+- Processes Anki card content to extract readable text
+- Polls Anki every 50ms for extremely responsive card detection
+
 ## Troubleshooting
 
-1. **App doesn't start / No menu bar icon / "Could not find anki_tts.py":**
-   * Verify `anki_tts.py` exists in `swift_app/Resources/`.
-   * Try cleaning the build directory (`rm -rf swift_app/.build`) and rebuilding.
+1. **App doesn't start / No menu bar icon:**
    * Ensure Anki is running with AnkiConnect.
-   * Verify uv is installed and dependencies are installed.
+   * Verify uv is installed and dependencies are installed: `uv pip install requests rumps`
+   * Try running directly: `uv run python anki_tts_menu.py`
+   * Check that macOS `say` command works: `say "test"`
 
 2. **No TTS sound / Text not being spoken:**
    * Check system volume and ensure audio output is working.
-   * Examine terminal output for TTS-specific errors.
+   * Test macOS `say` command directly: `say "This is a test"`
+   * Check if the app is detecting cards (look for "New card detected" messages)
+   * Verify AnkiConnect is working by checking if cards are being detected
 
 3. **Hearing multiple voices simultaneously:**
    * The app has a single-instance check, but if it crashed previously:
-     * Kill any lingering Python processes: `pkill -f "python.*anki_tts.py"`
+     * Kill any lingering Python processes: `pkill -f "python.*anki_tts"`
      * Make sure only one instance of the app is running
      * Remove any temporary speed files: `rm -f /tmp/anki_tts_speed_control.txt`
 
@@ -127,10 +139,14 @@ If you prefer to launch manually:
 ## Technical Details
 
 - **Environment Management:** Uses `uv` for fast Python dependency management
+- **Ultra-Fast Polling:** 50ms active polling, 100ms idle polling for near-instantaneous response
 - **Default Speed:** Set to 1.5x for optimal listening experience
 - **Auto-Shutdown:** Automatically exits after 15 minutes of inactivity to save system resources
-- **Speed Control:** File-based communication between Swift UI and Python TTS engine for real-time adjustments
-- **Single Instance:** Prevents multiple app instances using PID-based locking
+- **Speed Control:** File-based speed control system for real-time adjustments
+- **Single Instance:** Prevents multiple app instances using process management
+- **Menu Bar Interface:** Built with `rumps` library for native macOS menu bar integration
+- **TTS Engine:** Uses macOS built-in `say` command for reliable audio output
+- **Threading:** Background monitoring thread with optimized polling intervals
 
 ## Contributing
 
