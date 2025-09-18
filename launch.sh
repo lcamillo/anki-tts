@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Anki TTS Launch Script
-# This script sets up the uv environment and launches the Anki TTS app
+# This script sets up the uv environment and launches the menu bar app
 
 set -e
 
@@ -23,6 +23,7 @@ print_header() {
     echo "╔══════════════════════════════════════════════════════════════╗"
     echo "║                    🎧 Anki TTS Launcher 🎧                  ║"
     echo "║              Text-to-Speech for Anki Flashcards              ║"
+    echo "║                    Pure Python Implementation                ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -85,8 +86,8 @@ else
 fi
 
 # Install dependencies
-print_status "Installing Python dependencies..." "$PURPLE"
-uv pip install requests pyttsx3
+print_status "Installing dependencies..." "$PURPLE"
+uv pip install requests rumps
 print_success "Dependencies installed successfully"
 
 # Check if Anki is running
@@ -110,29 +111,13 @@ echo "$DEFAULT_SPEED" > /tmp/anki_tts_speed_control.txt
 
 # Kill any existing Python processes
 print_status "Cleaning up existing processes..." "$YELLOW"
-pkill -f "python.*anki_tts.py" 2>/dev/null || true
-
-# Launch the Swift app
-print_status "Preparing Swift application..." "$BLUE"
-cd swift_app
-
-# Build the Swift app if needed
-if [ ! -f ".build/release/AnkiTTSApp" ]; then
-    print_status "Building Swift application..." "$PURPLE"
-    swift build -c release
-    print_success "Swift app built successfully"
-else
-    print_success "Swift app already built"
-fi
-
-# Copy Python script to build directory
-mkdir -p .build/release
-cp Resources/anki_tts.py .build/release/
+pkill -f "python.*anki_tts" 2>/dev/null || true
 
 # Final launch message
 echo -e "${GREEN}${BOLD}"
 echo "╔══════════════════════════════════════════════════════════════╗"
 echo "║                    🚀 Launching Anki TTS 🚀                  ║"
+echo "║                    Pure Python Implementation                ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -141,30 +126,5 @@ print_info "Default speed is set to ${DEFAULT_SPEED}x"
 print_info "The app will automatically stop after 15 minutes of inactivity"
 echo ""
 
-# Set environment variable for Python path
-export PYTHONPATH="$(pwd)/.build/release:$PYTHONPATH"
-
-# Launch with uv environment
-uv run --directory .. python -u .build/release/anki_tts.py $DEFAULT_SPEED &
-PYTHON_PID=$!
-
-# Launch Swift app
-.build/release/AnkiTTSApp &
-SWIFT_PID=$!
-
-# Function to cleanup on exit
-cleanup() {
-    echo -e "\n${YELLOW}${BOLD}🛑 Shutting down Anki TTS...${NC}"
-    kill $PYTHON_PID 2>/dev/null || true
-    kill $SWIFT_PID 2>/dev/null || true
-    pkill -f "python.*anki_tts.py" 2>/dev/null || true
-    rm -f /tmp/anki_tts_speed_control.txt
-    print_success "Anki TTS stopped gracefully"
-    exit 0
-}
-
-# Set up signal handlers
-trap cleanup SIGINT SIGTERM
-
-# Wait for processes
-wait
+# Launch the menu bar app
+uv run python anki_tts_menu.py
