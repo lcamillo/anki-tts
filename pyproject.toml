@@ -1,6 +1,6 @@
 [project]
 name = "anki-tts"
-version = "0.3.0"
+version = "0.4.0"
 description = "Text-to-Speech menu bar application for Anki flashcards"
 authors = [
     {name = "Lucas Paulo de Lima Camillo"}
@@ -9,6 +9,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     "requests>=2.31.0",
-    "pyttsx3>=2.90",
     "rumps>=0.4.0",
+    "rich>=13.0.0",
+    "edge-tts>=7.0.0",
 ]
