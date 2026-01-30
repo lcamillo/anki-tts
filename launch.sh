@@ -1,130 +1,209 @@
 #!/bin/bash
 
 # Anki TTS Launch Script
-# This script sets up the uv environment and launches the menu bar app
+# Beautiful CLI launcher with animations
 
 set -e
 
-# Enhanced colors and styles for output
+# ═══════════════════════════════════════════════════════════════════════════════
+# Colors & Styles
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Reset
+NC='\033[0m'
+
+# Regular colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
+MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
-WHITE='\033[1;37m'
+WHITE='\033[0;37m'
+
+# Bold colors
 BOLD='\033[1m'
 DIM='\033[2m'
-NC='\033[0m' # No Color
+ITALIC='\033[3m'
 
-# Function to print a beautiful header
+# Bright colors
+BRIGHT_RED='\033[0;91m'
+BRIGHT_GREEN='\033[0;92m'
+BRIGHT_YELLOW='\033[0;93m'
+BRIGHT_BLUE='\033[0;94m'
+BRIGHT_MAGENTA='\033[0;95m'
+BRIGHT_CYAN='\033[0;96m'
+BRIGHT_WHITE='\033[0;97m'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Animation Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Spinner animation frames (dots style like Claude Code)
+SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
+
+spinner_pid=""
+
+start_spinner() {
+    local message="$1"
+    local i=0
+    while true; do
+        printf "\r  ${CYAN}${SPINNER_FRAMES[$i]}${NC} ${DIM}${message}${NC}  "
+        i=$(( (i + 1) % ${#SPINNER_FRAMES[@]} ))
+        sleep 0.08
+    done &
+    spinner_pid=$!
+}
+
+stop_spinner() {
+    if [ -n "$spinner_pid" ]; then
+        kill "$spinner_pid" 2>/dev/null
+        wait "$spinner_pid" 2>/dev/null || true
+        spinner_pid=""
+        printf "\r\033[K"
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Output Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
 print_header() {
-    echo -e "${CYAN}${BOLD}"
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    🎧 Anki TTS Launcher 🎧                  ║"
-    echo "║              Text-to-Speech for Anki Flashcards              ║"
-    echo "║                    Pure Python Implementation                ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo -e "${BRIGHT_MAGENTA}"
+    cat << 'EOF'
+    ╭─────────────────────────────────────────────────────────────╮
+    │                                                             │
+    │      ░█▀▀█ ░█▄─░█ ░█─▄▀ ▀█▀ ░░ ▀▀█▀▀ ▀▀█▀▀ ░█▀▀▀█          │
+    │      ░█▄▄█ ░█░█░█ ░█▀▄─ ░█─ ▀▀ ─░█── ─░█── ─▀▀▀▄▄          │
+    │      ░█─░█ ░█──▀█ ░█─░█ ▄█▄ ── ─░█── ─░█── ░█▄▄▄█          │
+    │                                                             │
+EOF
+    echo -e "${BRIGHT_CYAN}    │           Text-to-Speech for Anki Flashcards                │${NC}"
+    echo -e "${BRIGHT_MAGENTA}    │                                                             │"
+    echo "    ╰─────────────────────────────────────────────────────────────╯"
     echo -e "${NC}"
 }
 
-# Function to print status with spinner
-print_status() {
-    local message="$1"
-    local color="${2:-$WHITE}"
-    echo -e "${color}${BOLD}▶ ${message}${NC}"
+success() {
+    echo -e "  ${BRIGHT_GREEN}✓${NC} ${WHITE}$1${NC}"
 }
 
-# Function to print success
-print_success() {
-    local message="$1"
-    echo -e "${GREEN}${BOLD}✅ ${message}${NC}"
+error() {
+    echo -e "  ${BRIGHT_RED}✗${NC} ${WHITE}$1${NC}"
 }
 
-# Function to print warning
-print_warning() {
-    local message="$1"
-    echo -e "${YELLOW}${BOLD}⚠️  ${message}${NC}"
+warning() {
+    echo -e "  ${BRIGHT_YELLOW}!${NC} ${WHITE}$1${NC}"
 }
 
-# Function to print error
-print_error() {
-    local message="$1"
-    echo -e "${RED}${BOLD}❌ ${message}${NC}"
+info() {
+    echo -e "  ${BRIGHT_CYAN}○${NC} ${DIM}$1${NC}"
 }
 
-# Function to print info
-print_info() {
-    local message="$1"
-    echo -e "${BLUE}${BOLD}ℹ️  ${message}${NC}"
+section() {
+    echo ""
+    echo -e "  ${BOLD}${BRIGHT_WHITE}$1${NC}"
+    echo -e "  ${DIM}──────────────────────────────────────────────────────────${NC}"
 }
+
+# Task with spinner
+run_task() {
+    local message="$1"
+    local command="$2"
+
+    start_spinner "$message"
+
+    # Run the command and capture output
+    if output=$(eval "$command" 2>&1); then
+        stop_spinner
+        success "$message"
+        return 0
+    else
+        stop_spinner
+        error "$message"
+        if [ -n "$output" ]; then
+            echo -e "    ${DIM}$output${NC}"
+        fi
+        return 1
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Main Script
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Clear screen for fresh start
+clear
 
 print_header
 
+section "Environment Setup"
+
 # Check if uv is installed
 if ! command -v uv &> /dev/null; then
-    print_error "uv is not installed. Please install uv first:"
-    echo -e "${CYAN}${BOLD}   curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+    error "uv is not installed"
+    echo ""
+    info "Install with: ${BRIGHT_CYAN}curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+    echo ""
     exit 1
 fi
+success "uv package manager found"
 
 # Check if we're in the right directory
 if [ ! -f "pyproject.toml" ]; then
-    print_error "pyproject.toml not found. Please run this script from the project root."
+    error "Not in project directory"
+    info "Please run from the anki-tts project root"
     exit 1
 fi
+success "Project directory verified"
 
-print_status "Checking environment setup..."
+section "Dependencies"
 
 # Create uv environment if it doesn't exist
 if [ ! -d ".venv" ]; then
-    print_status "Creating uv virtual environment..." "$PURPLE"
-    uv venv
-    print_success "Virtual environment created"
+    run_task "Creating virtual environment" "uv venv --quiet"
 else
-    print_success "Virtual environment already exists"
+    success "Virtual environment exists"
 fi
 
 # Install dependencies
-print_status "Installing dependencies..." "$PURPLE"
-uv pip install requests rumps
-print_success "Dependencies installed successfully"
+run_task "Installing packages" "uv pip install --quiet requests rumps rich"
+
+section "Anki Connection"
 
 # Check if Anki is running
-print_status "Checking Anki connection..." "$BLUE"
-if ! curl -s http://127.0.0.1:8765 > /dev/null 2>&1; then
-    print_warning "Anki doesn't appear to be running or AnkiConnect is not enabled"
-    print_info "Please start Anki and ensure AnkiConnect plugin is installed and enabled"
-    print_info "The app will wait for Anki to start..."
+if curl -s --connect-timeout 2 http://127.0.0.1:8765 > /dev/null 2>&1; then
+    success "AnkiConnect is running"
 else
-    print_success "Anki connection verified"
+    warning "Anki not detected"
+    info "Start Anki with AnkiConnect plugin enabled"
+    info "The app will wait for connection..."
 fi
+
+section "Configuration"
 
 # Set default speed to 1.5x
 DEFAULT_SPEED=1.5
-print_status "Configuring default settings..." "$PURPLE"
-print_info "Setting default speed to ${DEFAULT_SPEED}x"
-
-# Create speed control file with default speed
 mkdir -p /tmp
 echo "$DEFAULT_SPEED" > /tmp/anki_tts_speed_control.txt
+success "Default speed set to ${DEFAULT_SPEED}x"
+
+# Auto-quit setting
+info "Auto-quit after 15 minutes of inactivity"
 
 # Kill any existing Python processes
-print_status "Cleaning up existing processes..." "$YELLOW"
-pkill -f "python.*anki_tts" 2>/dev/null || true
+if pkill -f "python.*anki_tts" 2>/dev/null; then
+    info "Stopped previous instance"
+fi
 
-# Final launch message
-echo -e "${GREEN}${BOLD}"
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                    🚀 Launching Anki TTS 🚀                  ║"
-echo "║                    Pure Python Implementation                ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
+section "Launch"
 
-print_success "Anki TTS is now running! Look for the speaker icon in your menu bar"
-print_info "Default speed is set to ${DEFAULT_SPEED}x"
-print_info "The app will automatically stop after 15 minutes of inactivity"
+echo ""
+echo -e "  ${BRIGHT_GREEN}${BOLD}Ready!${NC} ${DIM}Look for the 🎧 icon in your menu bar${NC}"
+echo ""
+echo -e "  ${DIM}──────────────────────────────────────────────────────────${NC}"
 echo ""
 
 # Launch the menu bar app
-uv run python anki_tts_menu.py
+exec uv run python anki_tts_menu.py
