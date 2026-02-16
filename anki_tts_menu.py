@@ -342,7 +342,7 @@ class AnkiTTSApp(rumps.App):
 
                     self.last_card_id = current_card_id
 
-                time.sleep(0.05)
+                time.sleep(0.02)
 
             except requests.exceptions.ConnectionError:
                 if self.is_speaking:
