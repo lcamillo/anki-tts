@@ -56,6 +56,23 @@ def _replace_symbols(text: str) -> str:
     )
 
 
+MAX_SPEAKABLE_LENGTH = 500
+
+
+def _strip_math(text: str) -> str:
+    """Strip MathJax/LaTeX delimiters and their contents from text."""
+    # \( ... \)  inline MathJax
+    text = re.sub(r"\\\(.*?\\\)", "", text, flags=re.DOTALL)
+    # \[ ... \]  display MathJax
+    text = re.sub(r"\\\[.*?\\\]", "", text, flags=re.DOTALL)
+    # $$ ... $$  display LaTeX (strip before single $ to avoid partial match)
+    text = re.sub(r"\$\$.*?\$\$", "", text, flags=re.DOTALL)
+    # $ ... $  inline LaTeX — only match if content has LaTeX commands (\)
+    # This avoids stripping dollar amounts like "$5.00"
+    text = re.sub(r"\$(?=[^$]*\\)[^$]+\$", "", text)
+    return text
+
+
 def extract_speakable_text(
     html_str: str, strip_question: bool = False
 ) -> str:
@@ -89,8 +106,17 @@ def extract_speakable_text(
     if text_match:
         content = text_match.group(1)
 
+    # Image-only cards: if content is only <img> tags, return empty
+    img_only = re.sub(r"<img[^>]*>", "", content)
+    img_only = re.sub(r"<[^>]+>", "", img_only).strip()
+    if not img_only and re.search(r"<img[^>]*>", content):
+        return ""
+
     # Replace [...] cloze placeholders with spoken form
-    content = re.sub(r"\[\s*\.\.\.\s*\]", "blank", content)
+    content = re.sub(r"\[\s*\.\.\.\s*\]", "bla bla bla", content)
+
+    # Strip MathJax/LaTeX before HTML removal (delimiters may span tags)
+    content = _strip_math(content)
 
     # Strip non-content elements
     content = re.sub(r"<script.*?</script>", "", content, flags=re.DOTALL)
@@ -106,5 +132,10 @@ def extract_speakable_text(
     clean = _strip_html(content)
     clean = _replace_symbols(clean)
     clean = re.sub(r"\s+", " ", clean)
+    clean = clean.strip()
 
-    return clean.strip()
+    # Cap length to avoid excessively long readings
+    if len(clean) > MAX_SPEAKABLE_LENGTH:
+        clean = clean[:MAX_SPEAKABLE_LENGTH].rsplit(" ", 1)[0] + "..."
+
+    return clean

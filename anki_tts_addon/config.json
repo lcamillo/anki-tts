@@ -1,7 +1,6 @@
 {
     "enabled": true,
     "speed": 1.5,
-    "voice": "en-GB-RyanNeural",
     "speak_question": true,
     "speak_answer": false,
     "fallback_to_system": true

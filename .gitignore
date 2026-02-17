@@ -39,12 +39,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Swift
-.swiftpm/
-.build/
-Packages/
-Package.resolved
-
 # IDE
 .vscode/
 .idea/
@@ -60,3 +54,23 @@ logs/
 *.tmp
 *.temp
 /tmp/
+
+# Build artifacts
+*.ankiaddon
+
+# Audio test files
+*.wav
+*.mp3
+
+# Bundled add-on dependencies (too large for git, must be built locally)
+anki_tts_addon/vendor/
+anki_tts_addon/voices/
+
+# Voice model experiments
+piper_voices/
+
+# Development plans
+docs/plans/
+
+# Claude memory files
+CLAUDE.md
