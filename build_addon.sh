@@ -24,7 +24,8 @@ zip -r "../$OUTPUT" . \
     -x "user_files/*" \
     -x "CLAUDE.md" \
     -x ".DS_Store" \
-    -x "meta.json"
+    -x "meta.json" \
+    -x "voices/*.onnx"
 cd ..
 
 SIZE=$(du -h "$OUTPUT" | cut -f1)

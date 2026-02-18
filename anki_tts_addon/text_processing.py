@@ -44,7 +44,7 @@ _SYMBOL_PATTERN = re.compile(
 def _strip_html(text: str) -> str:
     """Remove HTML tags and decode entities."""
     text = html_module.unescape(text)
-    text = re.sub(r"<.*?>", "", text)
+    text = re.sub(r"<[^>]*>", "", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
@@ -74,7 +74,9 @@ def _strip_math(text: str) -> str:
 
 
 def extract_speakable_text(
-    html_str: str, strip_question: bool = False
+    html_str: str,
+    strip_question: bool = False,
+    active_ord: int = None,
 ) -> str:
     """
     Extract speakable text from Anki card HTML.
@@ -83,6 +85,8 @@ def extract_speakable_text(
         html_str: Raw HTML from card.question() or card.answer()
         strip_question: If True, strip the question portion from an answer.
             Answer HTML includes question + <hr id=answer> + answer content.
+        active_ord: 0-indexed card ordinal (card.ord). Used to blank only
+            the active cloze in raw cloze syntax. c1 → ord 0, c2 → ord 1.
     """
     if not html_str:
         return ""
@@ -114,6 +118,20 @@ def extract_speakable_text(
 
     # Replace [...] cloze placeholders with spoken form
     content = re.sub(r"\[\s*\.\.\.\s*\]", "bla bla bla", content)
+    # Also handle Unicode ellipsis variant […]
+    content = re.sub(r"\[\s*\u2026\s*\]", "bla bla bla", content)
+
+    # Replace raw cloze syntax: active cloze → "bla bla bla", inactive → keep text
+    if active_ord is not None:
+        cloze_num = active_ord + 1
+        content = re.sub(
+            r"\{\{c" + str(cloze_num) + r"::.*?(?:::.*?)?\}\}",
+            "bla bla bla", content, flags=re.DOTALL,
+        )
+    # Strip remaining raw cloze wrappers but keep their answer text
+    content = re.sub(
+        r"\{\{c\d+::(.*?)(?:::.*?)?\}\}", r"\1", content, flags=re.DOTALL,
+    )
 
     # Strip MathJax/LaTeX before HTML removal (delimiters may span tags)
     content = _strip_math(content)

@@ -101,14 +101,20 @@ def _import_edge_tts():
 # ---------------------------------------------------------------------------
 
 def _load_piper_voice():
-    """Load the bundled Piper voice model."""
+    """Load the Piper voice model, downloading it on first use if needed."""
+    from .model_downloader import ensure_model, format_progress
+
+    def _progress(downloaded: int, total: int):
+        _notify(format_progress(downloaded, total))
+
+    model_path = ensure_model(progress_callback=_progress)
+    if model_path is None:
+        _notify("Voice model unavailable — using system TTS")
+        return None
+
     _ensure_vendor_on_path()
     try:
         from piper.voice import PiperVoice
-        model_path = os.path.join(_addon_dir(), "voices", "en_GB-alan-medium.onnx")
-        if not os.path.isfile(model_path):
-            log.error("Piper voice model not found: %s", model_path)
-            return None
         return PiperVoice.load(model_path)
     except Exception as e:
         log.error("Failed to load Piper voice: %s", e)
@@ -145,10 +151,11 @@ class TTSEngine:
         return self._edge_tts
 
     def _get_piper_voice(self):
-        """Lazily load the bundled Piper voice model."""
-        if not self._piper_voice_checked:
+        """Lazily load the Piper voice model. Retries if model wasn't available."""
+        if not self._piper_voice_checked or self._piper_voice is None:
             self._piper_voice = _load_piper_voice()
-            self._piper_voice_checked = True
+            if self._piper_voice is not None:
+                self._piper_voice_checked = True
         return self._piper_voice
 
     def speak(self, text: str, config: dict) -> None:

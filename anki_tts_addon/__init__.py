@@ -22,9 +22,11 @@ from aqt.qt import (
 )
 from aqt.utils import tooltip
 from typing import Optional
+import threading
 
 from .tts_engine import TTSEngine, set_status_callback
 from .text_processing import extract_speakable_text
+from .model_downloader import ensure_model, is_model_available, format_progress
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +73,7 @@ def on_reviewer_did_show_question(card) -> None:
     engine().stop()
 
     question_html = card.question()
-    text = extract_speakable_text(question_html)
+    text = extract_speakable_text(question_html, active_ord=card.ord)
     if text:
         engine().speak(text, conf)
 
@@ -83,7 +85,9 @@ def on_reviewer_did_show_answer(card) -> None:
         return
 
     answer_html = card.answer()
-    text = extract_speakable_text(answer_html, strip_question=True)
+    text = extract_speakable_text(
+        answer_html, strip_question=True, active_ord=card.ord
+    )
     if text:
         engine().speak(text, conf)
 
@@ -198,6 +202,26 @@ def toggle_tts():
     tooltip(f"Anki TTS {state}")
 
 
+def download_voice_model():
+    """Manually trigger voice model download in a background thread."""
+    if is_model_available():
+        tooltip("Voice model already downloaded")
+        return
+
+    def _progress(downloaded: int, total: int):
+        _show_status(format_progress(downloaded, total))
+
+    def _run():
+        path = ensure_model(progress_callback=_progress)
+        if path:
+            _show_status("Voice model downloaded successfully")
+        else:
+            _show_status("Voice model download failed")
+
+    threading.Thread(target=_run, daemon=True).start()
+    tooltip("Downloading voice model in background...")
+
+
 # ---------------------------------------------------------------------------
 # Bootstrap — must wait for profile to load before accessing mw.form / config
 # ---------------------------------------------------------------------------
@@ -222,6 +246,10 @@ def _on_profile_did_open():
         settings_action = QAction("Settings...", mw)
         settings_action.triggered.connect(lambda: SettingsDialog(mw).exec())
         menu.addAction(settings_action)
+
+        download_action = QAction("Download Voice Model", mw)
+        download_action.triggered.connect(download_voice_model)
+        menu.addAction(download_action)
 
         mw.form.menubar.addMenu(menu)
         _menu_added = True

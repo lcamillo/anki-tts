@@ -11,6 +11,5 @@
 | #4195 | 5:58 AM | 🔵 | Add-on Manifest is Minimal and Missing Version/Conflict Fields | ~281 |
 | #4194 | " | 🔵 | Add-on Config Defaults Defined Without Piper Support | ~254 |
 | #4192 | " | 🔵 | TTS Engine Module Uses Edge TTS with Auto-Install Vendor Pattern | ~450 |
-| #4191 | 5:57 AM | 🔵 | Text Processing Module Already Ported to Add-on Package | ~330 |
-| #4190 | " | 🔵 | Anki Add-on Package Already Partially Built | ~470 |
+| #4190 | 5:57 AM | 🔵 | Anki Add-on Package Already Partially Built | ~470 |
 </claude-mem-context>
