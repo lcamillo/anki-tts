@@ -40,6 +40,18 @@ _SYMBOL_PATTERN = re.compile(
     "|".join(map(re.escape, SYMBOL_REPLACEMENTS.keys()))
 )
 
+SPOKEN_CLOZE_PLACEHOLDER = "bla bla bla"
+RAW_CLOZE_PATTERN = re.compile(
+    r"\{\{c\d+::.*?(?:::.*?)?\}\}", re.DOTALL | re.IGNORECASE
+)
+RAW_CLOZE_UNWRAP_PATTERN = re.compile(
+    r"\{\{c\d+::(.*?)(?:::.*?)?\}\}", re.DOTALL | re.IGNORECASE
+)
+RENDERED_CLOZE_PATTERN = re.compile(
+    r"<([a-zA-Z0-9]+)[^>]*class=[\"'][^\"']*\bcloze\b[^\"']*[\"'][^>]*>.*?</\1>",
+    re.DOTALL | re.IGNORECASE,
+)
+
 
 def _strip_html(text: str) -> str:
     """Remove HTML tags and decode entities."""
@@ -85,8 +97,8 @@ def extract_speakable_text(
         html_str: Raw HTML from card.question() or card.answer()
         strip_question: If True, strip the question portion from an answer.
             Answer HTML includes question + <hr id=answer> + answer content.
-        active_ord: 0-indexed card ordinal (card.ord). Used to blank only
-            the active cloze in raw cloze syntax. c1 → ord 0, c2 → ord 1.
+        active_ord: 0-indexed card ordinal (card.ord). Kept for API
+            compatibility; cloze masking is now based on rendered/raw content.
     """
     if not html_str:
         return ""
@@ -117,21 +129,25 @@ def extract_speakable_text(
         return ""
 
     # Replace [...] cloze placeholders with spoken form
-    content = re.sub(r"\[\s*\.\.\.\s*\]", "bla bla bla", content)
-    # Also handle Unicode ellipsis variant […]
-    content = re.sub(r"\[\s*\u2026\s*\]", "bla bla bla", content)
-
-    # Replace raw cloze syntax: active cloze → "bla bla bla", inactive → keep text
-    if active_ord is not None:
-        cloze_num = active_ord + 1
-        content = re.sub(
-            r"\{\{c" + str(cloze_num) + r"::.*?(?:::.*?)?\}\}",
-            "bla bla bla", content, flags=re.DOTALL,
-        )
-    # Strip remaining raw cloze wrappers but keep their answer text
     content = re.sub(
-        r"\{\{c\d+::(.*?)(?:::.*?)?\}\}", r"\1", content, flags=re.DOTALL,
+        r"\[\s*\.\.\.\s*\]", SPOKEN_CLOZE_PLACEHOLDER, content
     )
+    # Also handle Unicode ellipsis variant […]
+    content = re.sub(
+        r"\[\s*\u2026\s*\]", SPOKEN_CLOZE_PLACEHOLDER, content
+    )
+
+    if strip_question:
+        # On answer side, preserve answers and only unwrap raw cloze syntax.
+        content = RAW_CLOZE_UNWRAP_PATTERN.sub(r"\1", content)
+    else:
+        # Question side should never leak cloze answers.
+        # If a template outputs raw cloze syntax, mask every cloze.
+        content = RAW_CLOZE_PATTERN.sub(SPOKEN_CLOZE_PLACEHOLDER, content)
+        # Some templates render active clozes with class="cloze" instead of [...].
+        content = RENDERED_CLOZE_PATTERN.sub(
+            SPOKEN_CLOZE_PLACEHOLDER, content
+        )
 
     # Strip MathJax/LaTeX before HTML removal (delimiters may span tags)
     content = _strip_math(content)
