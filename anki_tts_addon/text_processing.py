@@ -41,11 +41,11 @@ _SYMBOL_PATTERN = re.compile(
 )
 
 SPOKEN_CLOZE_PLACEHOLDER = "bla bla bla"
-RAW_CLOZE_PATTERN = re.compile(
-    r"\{\{c\d+::.*?(?:::.*?)?\}\}", re.DOTALL | re.IGNORECASE
-)
 RAW_CLOZE_UNWRAP_PATTERN = re.compile(
     r"\{\{c\d+::(.*?)(?:::.*?)?\}\}", re.DOTALL | re.IGNORECASE
+)
+RAW_CLOZE_CAPTURE_PATTERN = re.compile(
+    r"\{\{c(\d+)::(.*?)(?:::.*?)?\}\}", re.DOTALL | re.IGNORECASE
 )
 RENDERED_CLOZE_PATTERN = re.compile(
     r"<([a-zA-Z0-9]+)[^>]*class=[\"'][^\"']*\bcloze\b[^\"']*[\"'][^>]*>.*?</\1>",
@@ -83,6 +83,24 @@ def _strip_math(text: str) -> str:
     # This avoids stripping dollar amounts like "$5.00"
     text = re.sub(r"\$(?=[^$]*\\)[^$]+\$", "", text)
     return text
+
+
+def _mask_active_raw_cloze(content: str, active_ord: int) -> str:
+    """Mask only the active raw cloze; keep inactive cloze text visible."""
+    if active_ord is None:
+        # Safe fallback when we don't know the active card ordinal.
+        return RAW_CLOZE_CAPTURE_PATTERN.sub(SPOKEN_CLOZE_PLACEHOLDER, content)
+
+    active_cloze_num = active_ord + 1
+
+    def _replace(match: re.Match) -> str:
+        cloze_num = int(match.group(1))
+        cloze_text = match.group(2)
+        if cloze_num == active_cloze_num:
+            return SPOKEN_CLOZE_PLACEHOLDER
+        return cloze_text
+
+    return RAW_CLOZE_CAPTURE_PATTERN.sub(_replace, content)
 
 
 def extract_speakable_text(
@@ -141,9 +159,8 @@ def extract_speakable_text(
         # On answer side, preserve answers and only unwrap raw cloze syntax.
         content = RAW_CLOZE_UNWRAP_PATTERN.sub(r"\1", content)
     else:
-        # Question side should never leak cloze answers.
-        # If a template outputs raw cloze syntax, mask every cloze.
-        content = RAW_CLOZE_PATTERN.sub(SPOKEN_CLOZE_PLACEHOLDER, content)
+        # Question side should mask only the active raw cloze, not all clozes.
+        content = _mask_active_raw_cloze(content, active_ord)
         # Some templates render active clozes with class="cloze" instead of [...].
         content = RENDERED_CLOZE_PATTERN.sub(
             SPOKEN_CLOZE_PLACEHOLDER, content
